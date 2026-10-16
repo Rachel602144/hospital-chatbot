@@ -55,7 +55,7 @@ def _guard(reply: str, state: dict) -> str:
 
 
 def handle_message(text: str, state: dict, history: list, session_id: str, llm) -> dict:
-    """Returns {"reply", "level", "used_llm", "fallback"} and mutates state/history in place."""
+    """Returns {"reply", "level", "used_llm", "fallback", "tools"} and mutates state/history in place."""
     level = safety.classify(text)
     history.append({"role": "user", "content": text})
 
@@ -95,6 +95,7 @@ def handle_message(text: str, state: dict, history: list, session_id: str, llm) 
                                    "you may add the history as an administrative note if they are requesting an appointment.\n")
     messages += history[-HISTORY_MESSAGES:]
 
+    tools_used = []
     try:
         reply = None
         for _ in range(MAX_TOOL_ROUNDS):
@@ -112,6 +113,7 @@ def handle_message(text: str, state: dict, history: list, session_id: str, llm) 
                 ],
             })
             for c in calls:
+                tools_used.append(c.function.name)
                 result, urgent = tools.execute(c.function.name, c.function.arguments, state, session_id)
                 if urgent:  # second, model-based safety layer
                     log.info("model flagged urgent symptoms")
@@ -130,4 +132,4 @@ def handle_message(text: str, state: dict, history: list, session_id: str, llm) 
     # ---- 4. output guard --------------------------------------------------------
     reply = prefix + _guard(reply, state)
     history.append({"role": "assistant", "content": reply})
-    return {"reply": reply, "level": level.value, "used_llm": True, "fallback": False}
+    return {"reply": reply, "level": level.value, "used_llm": True, "fallback": False, "tools": tools_used}

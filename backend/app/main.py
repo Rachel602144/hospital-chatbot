@@ -121,8 +121,9 @@ def chat(body: ChatIn, request: Request):
         state, history = _load_or_404(body.session_id)
         result = engine.handle_message(body.message, state, history, body.session_id, llm)
         db.save_session(body.session_id, state, history[-MAX_STORED_HISTORY:])
-    log.info("session=%s level=%s llm=%s fallback=%s",
-             body.session_id[:8], result["level"], result["used_llm"], result["fallback"])
+    log.info("session=%s level=%s llm=%s fallback=%s tools=%s appt=%s",
+             body.session_id[:8], result["level"], result["used_llm"], result["fallback"],
+             ",".join(result.get("tools", [])) or "none", state["appointment"]["status"])
     return {"reply": result["reply"], "fallback": result["fallback"], "state": public_state(state)}
 
 

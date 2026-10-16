@@ -68,7 +68,7 @@ export default function Staff() {
                 <p className="ticket__reason">{h.reason}</p>
                 <p>{h.summary}</p>
                 {h.status === "open" && (
-                  <button className="btn btn--quiet" onClick={() => resolve(h.id)} type="button">
+                  <button className="btn btn--ghost" onClick={() => resolve(h.id)} type="button">
                     Mark resolved
                   </button>
                 )}
