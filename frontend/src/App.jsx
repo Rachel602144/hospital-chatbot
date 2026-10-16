@@ -32,28 +32,70 @@ function receptionStatus() {
   const day = ist.getDay(); // 0 = Sunday
   const h = ist.getHours();
   const open = day === 0 ? h >= 9 && h < 13 : h >= 8 && h < 20;
-  return open ? "Reception is open now" : "Reception is closed now. Requests are picked up when it opens.";
+  return open ? "Reception is open now" : "Reception closed now. Requests are picked up when it opens.";
 }
+
+export function Logo({ size = 44 }) {
+  // Aranya = "forest": a simple sprout mark instead of a letter placeholder.
+  return (
+    <svg className="logo" width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="14" fill="var(--forest)" />
+      <path d="M24 36V24" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+      <path d="M24 26c-1-6-5-10-11-10 0 6 4 10 11 10z" fill="#fff" />
+      <path d="M24 23c1-6 5-10 11-10 0 6-4 10-11 10z" fill="#bfe0cf" />
+    </svg>
+  );
+}
+
+const STEPS = [
+  ["department", "Department"],
+  ["date", "Date"],
+  ["time_slot", "Session"],
+  ["patient_name", "Patient"],
+  ["phone", "Phone"],
+];
 
 function RequestStatus({ state }) {
   if (!state || state.appointment_status === "none") return null;
   const { appointment_status: status, appointment_summary: s, still_missing, appointment_reference } = state;
-  const parts = [s.department, formatDate(s.date), s.time_slot].filter(Boolean).join(", ");
-  if (status === "pending_confirmation") {
-    return (
-      <div className="request request--sent" role="status">
-        <strong>Request {appointment_reference} sent to reception</strong>
-        <span>{parts}. Not confirmed yet. Reception will call to confirm the time and doctor.</span>
-      </div>
-    );
-  }
+  const sent = status === "pending_confirmation";
+  const summary = [s.department, formatDate(s.date), s.time_slot].filter(Boolean).join(", ");
   return (
-    <div className="request" role="status">
-      <strong>Appointment request in progress</strong>
-      <span>
-        {parts || "No details yet"}
-        {still_missing.length > 0 && `. Still needed: ${still_missing.map((f) => f.replace("_", " ")).join(", ")}`}
-      </span>
+    <div className={`request ${sent ? "request--sent" : ""}`} role="status">
+      <div className="request__top">
+        <strong>{sent ? `Request ${appointment_reference} sent to reception` : "Appointment request"}</strong>
+        <span className="request__summary">{summary}</span>
+      </div>
+      <ol className="steps">
+        {STEPS.map(([key, label]) => {
+          const done = sent || !still_missing.includes(key);
+          return (
+            <li key={key} className={done ? "done" : ""}>
+              <span className="tick" aria-hidden="true">{done ? "✓" : ""}</span>
+              {label}
+              <span className="sr-only">{done ? " (given)" : " (still needed)"}</span>
+            </li>
+          );
+        })}
+      </ol>
+      {sent && <p className="request__note">Not confirmed yet. Reception will call to confirm the time and doctor.</p>}
+    </div>
+  );
+}
+
+function UrgentActions({ mode }) {
+  const calls =
+    mode === "crisis"
+      ? [["tel:112", "Call 112"], ["tel:14416", "Tele-MANAS 14416"]]
+      : [["tel:108", "Call 108 ambulance"], ["tel:08040001999", "Call our Emergency"]];
+  return (
+    <div className="urgent">
+      <strong className="urgent__title">{mode === "crisis" ? "You don't have to deal with this alone" : "Please get urgent help now"}</strong>
+      <div className="urgent__buttons">
+        {calls.map(([href, label]) => (
+          <a key={href} className="urgent__btn" href={href}>{label}</a>
+        ))}
+      </div>
     </div>
   );
 }
@@ -156,7 +198,7 @@ export default function App() {
       <div className="layout">
         <aside className="info">
           <div className="info__brand">
-            <span className="mark" aria-hidden="true">A</span>
+            <Logo size={48} />
             <div>
               <h1>Aranya Hospital</h1>
               <p>Hebbal, Bengaluru</p>
@@ -166,7 +208,7 @@ export default function App() {
           <p className={`info__status ${receptionStatus().startsWith("Reception is open") ? "is-open" : ""}`}>{receptionStatus()}</p>
 
           <dl className="hours">
-            <div><dt>OPD</dt><dd>Mon–Sat, 9am–1pm and 4pm–7pm<br />Saturday mornings only</dd></div>
+            <div><dt>OPD</dt><dd>Mon–Sat 9–1 and 4–7<br />Saturday mornings only</dd></div>
             <div><dt>Reception</dt><dd>080-4000-1000<br />Mon–Sat 8am–8pm, Sun 9am–1pm</dd></div>
             <div><dt>Emergency</dt><dd>Open 24 hours<br />080-4000-1999</dd></div>
           </dl>
@@ -174,13 +216,22 @@ export default function App() {
           <div className="info__scope">
             <h2>This assistant can</h2>
             <ul>
-              <li>answer questions about timings, departments and tests</li>
-              <li>send an appointment request to reception</li>
+              <li>answer questions on timings and tests</li>
+              <li>send appointment requests to reception</li>
               <li>pass you to the front desk</li>
             </ul>
             <h2>It can't</h2>
             <ul>
               <li>give medical advice or confirm appointments</li>
+            </ul>
+          </div>
+
+          <div className="info__scope">
+            <h2>Bring to your visit</h2>
+            <ul>
+              <li>patient's photo ID</li>
+              <li>old prescriptions and reports</li>
+              <li>list of current medicines</li>
             </ul>
           </div>
 
@@ -192,10 +243,13 @@ export default function App() {
         <section className="chat" aria-label="Chat with the hospital assistant">
           <header className="chat__head">
             <div className="who">
-              <span className="mark mark--small" aria-hidden="true">A</span>
+              <Logo size={40} />
               <div>
                 <strong>Aranya assistant</strong>
-                <span className="who__sub">{inHandoff ? `Front desk ticket ${botState.handoff_ticket}` : "Usually replies in a few seconds"}</span>
+                <span className="who__sub">
+                  <span className="online" aria-hidden="true" />
+                  {inHandoff ? `Passed to front desk, ticket ${botState.handoff_ticket}` : "Online. Usually replies in a few seconds"}
+                </span>
               </div>
             </div>
             <div className="chat__actions">
@@ -211,7 +265,7 @@ export default function App() {
           <div className="log" aria-live="polite">
             {messages.map((m, i) => (
               <div key={i} className={`row row--${m.role}`}>
-                {m.role === "assistant" && <span className="mark mark--tiny" aria-hidden="true">A</span>}
+                {m.role === "assistant" && <Logo size={28} />}
                 <div
                   className={[
                     "msg",
@@ -220,8 +274,9 @@ export default function App() {
                     m.fallback && "msg--fallback",
                   ].filter(Boolean).join(" ")}
                 >
+                  {(m.mode === "emergency" || m.mode === "crisis") && <UrgentActions mode={m.mode} />}
                   {/* Plain text: React escapes it, so HTML inside a message can't run (XSS-safe). */}
-                  {m.text}
+                  <span className="msg__text">{m.text}</span>
                 </div>
               </div>
             ))}
@@ -238,7 +293,7 @@ export default function App() {
 
             {sending && (
               <div className="row row--assistant" aria-label="Assistant is replying">
-                <span className="mark mark--tiny" aria-hidden="true">A</span>
+                <Logo size={28} />
                 <div className="msg msg--assistant msg--typing">
                   <span className="dots"><i /><i /><i /></span>
                   {slow && <span>Taking longer than usual…</span>}
