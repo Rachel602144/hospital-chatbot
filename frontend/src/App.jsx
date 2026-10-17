@@ -12,6 +12,20 @@ const SUGGESTIONS = [
   "What are the visiting hours?",
 ];
 
+const icon = (d) => (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{d}</svg>
+);
+const CHIP_ICONS = [
+  icon(<><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>),
+  icon(<><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></>),
+  icon(<><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3" /></>),
+  icon(<><circle cx="9" cy="8" r="3" /><path d="M3 20a6 6 0 0 1 12 0M16 4a3 3 0 0 1 0 6M21 20a6 6 0 0 0-4-5.6" /></>),
+];
+
+function PersonIcon() {
+  return icon(<><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>);
+}
+
 function loadStored() {
   try {
     return JSON.parse(sessionStorage.getItem(STORE_KEY)) || null;
@@ -121,6 +135,8 @@ export default function App() {
   }, [sessionId, messages, botState]);
 
   useEffect(() => {
+    // Keep the newest message in view, but not on the welcome screen (it would cut off its top).
+    if (!messages.some((m) => m.role === "user") && !sending) return;
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, sending]);
 
@@ -129,7 +145,7 @@ export default function App() {
     try {
       const data = await api.newSession();
       setSessionId(data.session_id);
-      setMessages([{ role: "assistant", text: data.greeting }]);
+      setMessages([{ role: "assistant", text: data.greeting, at: Date.now() }]);
       setBotState(null);
     } catch {
       setError({
@@ -153,7 +169,7 @@ export default function App() {
     const slowTimer = setTimeout(() => setSlow(true), 6000);
     try {
       const data = await call();
-      setMessages((m) => [...m, { role: "assistant", text: data.reply, mode: data.state.mode, fallback: data.fallback }]);
+      setMessages((m) => [...m, { role: "assistant", text: data.reply, mode: data.state.mode, fallback: data.fallback, at: Date.now() }]);
       setBotState(data.state);
     } catch (e) {
       if (e.status === 404) {
@@ -175,64 +191,73 @@ export default function App() {
     text = text.trim();
     if (!text || sending || !sessionId) return;
     setInput("");
-    setMessages((m) => [...m, { role: "user", text }]);
+    setMessages((m) => [...m, { role: "user", text, at: Date.now() }]);
     run(() => api.chat(sessionId, text));
   }
 
   function askForPerson() {
     if (sending || !sessionId) return;
-    setMessages((m) => [...m, { role: "user", text: "I'd like to talk to a person." }]);
+    setMessages((m) => [...m, { role: "user", text: "I'd like to talk to a person.", at: Date.now() }]);
     run(() => api.handoff(sessionId));
   }
 
   const inHandoff = botState?.mode === "handoff";
   const fresh = !messages.some((m) => m.role === "user");
+  const open = receptionStatus().startsWith("Reception is open");
 
   return (
     <div className="page">
-      <a className="emergency" href="tel:108">
-        <span className="emergency__lead">Medical emergency?</span>
-        <span>Call 108 or come to our Emergency, open 24 hours: 080-4000-1999</span>
-      </a>
+      <div className="band" aria-hidden="true" />
+      <nav className="topbar">
+        <div className="topbar__brand">
+          <Logo size={40} />
+          <div>
+            <strong>Aranya Hospital</strong>
+            <span>Hebbal, Bengaluru</span>
+          </div>
+        </div>
+        <a className="sos" href="tel:108">
+          <span className="sos__pulse" aria-hidden="true" />
+          <span className="sos__label">Medical emergency? Call 108</span>
+          <span className="sos__nums">Emergency 24×7: 080-4000-1999</span>
+        </a>
+      </nav>
 
       <div className="layout">
         <aside className="info">
-          <div className="info__brand">
-            <Logo size={48} />
+          <h1 className="info__title">Hospital help, at any hour.</h1>
+          <p className="info__lede">
+            Ask about timings and tests, request an appointment, or reach our front desk. Calm answers, no forms.
+          </p>
+
+          <div className="card">
+            <p className={`status ${open ? "is-open" : ""}`}>
+              <span className="status__dot" aria-hidden="true" />
+              {open ? "Reception is open now" : "Reception is closed. Requests are picked up when it opens."}
+            </p>
+            <dl className="hours">
+              <div><dt>OPD</dt><dd>Mon–Sat 9–1 and 4–7<br />Saturday mornings only</dd></div>
+              <div><dt>Reception</dt><dd>080-4000-1000<br />Mon–Sat 8am–8pm, Sun 9am–1pm</dd></div>
+              <div><dt>Emergency</dt><dd>Open 24 hours<br />080-4000-1999</dd></div>
+            </dl>
+          </div>
+
+          <div className="card card--split">
             <div>
-              <h1>Aranya Hospital</h1>
-              <p>Hebbal, Bengaluru</p>
+              <h2>The assistant can</h2>
+              <ul className="ticks">
+                <li>answer timings and test questions</li>
+                <li>send appointment requests</li>
+                <li>pass you to the front desk</li>
+              </ul>
             </div>
-          </div>
-
-          <p className={`info__status ${receptionStatus().startsWith("Reception is open") ? "is-open" : ""}`}>{receptionStatus()}</p>
-
-          <dl className="hours">
-            <div><dt>OPD</dt><dd>Mon–Sat 9–1 and 4–7<br />Saturday mornings only</dd></div>
-            <div><dt>Reception</dt><dd>080-4000-1000<br />Mon–Sat 8am–8pm, Sun 9am–1pm</dd></div>
-            <div><dt>Emergency</dt><dd>Open 24 hours<br />080-4000-1999</dd></div>
-          </dl>
-
-          <div className="info__scope">
-            <h2>This assistant can</h2>
-            <ul>
-              <li>answer questions on timings and tests</li>
-              <li>send appointment requests to reception</li>
-              <li>pass you to the front desk</li>
-            </ul>
-            <h2>It can't</h2>
-            <ul>
-              <li>give medical advice or confirm appointments</li>
-            </ul>
-          </div>
-
-          <div className="info__scope">
-            <h2>Bring to your visit</h2>
-            <ul>
-              <li>patient's photo ID</li>
-              <li>old prescriptions and reports</li>
-              <li>list of current medicines</li>
-            </ul>
+            <div>
+              <h2>It won't</h2>
+              <ul className="crosses">
+                <li>give medical advice</li>
+                <li>confirm appointments itself</li>
+              </ul>
+            </div>
           </div>
 
           <p className="info__note">
@@ -257,43 +282,53 @@ export default function App() {
                 New conversation
               </button>
               <button className="btn btn--person" onClick={askForPerson} disabled={sending || inHandoff} type="button">
+                <PersonIcon />
                 {inHandoff ? "With front desk" : "Talk to a person"}
               </button>
             </div>
           </header>
 
           <div className="log" aria-live="polite">
-            {messages.map((m, i) => (
-              <div key={i} className={`row row--${m.role}`}>
-                {m.role === "assistant" && <Logo size={28} />}
-                <div
-                  className={[
-                    "msg",
-                    `msg--${m.role}`,
-                    (m.mode === "emergency" || m.mode === "crisis") && "msg--urgent",
-                    m.fallback && "msg--fallback",
-                  ].filter(Boolean).join(" ")}
-                >
-                  {(m.mode === "emergency" || m.mode === "crisis") && <UrgentActions mode={m.mode} />}
-                  {/* Plain text: React escapes it, so HTML inside a message can't run (XSS-safe). */}
-                  <span className="msg__text">{m.text}</span>
+            {fresh && sessionId && !sending ? (
+              <div className="welcome">
+                <Logo size={64} />
+                <h2>Hello, how can I help today?</h2>
+                <p>I can answer questions about timings, departments and test preparation, send an appointment request to reception, or connect you with our front desk.</p>
+                <div className="suggest" aria-label="Suggested questions">
+                  {SUGGESTIONS.map((s, i) => (
+                    <button key={s} type="button" className="chip" onClick={() => sendText(s)}>
+                      <span className="chip__icon" aria-hidden="true">{CHIP_ICONS[i]}</span>
+                      <span>{s}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
-            ))}
-
-            {fresh && sessionId && !sending && (
-              <div className="suggest" aria-label="Suggested questions">
-                {SUGGESTIONS.map((s) => (
-                  <button key={s} type="button" className="chip" onClick={() => sendText(s)}>
-                    {s}
-                  </button>
-                ))}
-              </div>
+            ) : (
+              messages.map((m, i) => (
+                <div key={i} className={`row row--${m.role}`}>
+                  {m.role === "assistant" && <Logo size={30} />}
+                  <div className="bubble-wrap">
+                    <div
+                      className={[
+                        "msg",
+                        `msg--${m.role}`,
+                        (m.mode === "emergency" || m.mode === "crisis") && "msg--urgent",
+                        m.fallback && "msg--fallback",
+                      ].filter(Boolean).join(" ")}
+                    >
+                      {(m.mode === "emergency" || m.mode === "crisis") && <UrgentActions mode={m.mode} />}
+                      {/* Plain text: React escapes it, so HTML inside a message can't run (XSS-safe). */}
+                      <span className="msg__text">{m.text}</span>
+                    </div>
+                    {m.at && <time className="stamp">{new Date(m.at).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}</time>}
+                  </div>
+                </div>
+              ))
             )}
 
             {sending && (
               <div className="row row--assistant" aria-label="Assistant is replying">
-                <Logo size={28} />
+                <Logo size={30} />
                 <div className="msg msg--assistant msg--typing">
                   <span className="dots"><i /><i /><i /></span>
                   {slow && <span>Taking longer than usual…</span>}
@@ -329,7 +364,7 @@ export default function App() {
                 rows={1}
                 maxLength={1000}
                 value={input}
-                placeholder="Type your message"
+                placeholder="Type your message…"
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
@@ -339,8 +374,10 @@ export default function App() {
                 }}
                 autoFocus
               />
-              <button className="btn btn--send" type="submit" disabled={sending || !input.trim()}>
-                Send
+              <button className="send" type="submit" disabled={sending || !input.trim()} aria-label="Send message">
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                  <path d="M4 12l16-8-6 16-2.5-6.5L4 12z" fill="currentColor" />
+                </svg>
               </button>
             </form>
             <p className="fineprint">Not for medical advice. Please don't share sensitive medical details here.</p>
