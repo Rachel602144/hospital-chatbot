@@ -87,6 +87,12 @@ TOOL_SCHEMAS = [
 ]
 
 
+def readable_date(date_str: str) -> str:
+    """'2026-10-23' -> 'Friday 23 October 2026'. Code, not the model, decides the weekday."""
+    from datetime import datetime
+    return datetime.strptime(date_str, "%Y-%m-%d").strftime("%A %d %B %Y").replace(" 0", " ")
+
+
 def missing_fields(appt: dict) -> list[str]:
     return [f for f in REQUIRED_FIELDS if not appt.get(f)]
 
@@ -152,7 +158,10 @@ def _update(state: dict, args: dict) -> dict:
     appt.update(saved)
     if saved and appt["status"] == "none":
         appt["status"] = "draft"
-    return {"ok": not errors, "saved": saved, "errors": errors, "still_missing": missing_fields(appt)}
+    result = {"ok": not errors, "saved": saved, "errors": errors, "still_missing": missing_fields(appt)}
+    if appt["date"]:
+        result["date_readable"] = readable_date(appt["date"])
+    return result
 
 
 def _submit(state: dict, session_id: str) -> dict:
@@ -172,6 +181,7 @@ def _submit(state: dict, session_id: str) -> dict:
         "ok": True,
         "reference": appt["reference"],
         "status": "pending_confirmation",
+        "date_readable": readable_date(appt["date"]),
         "meaning": "Reception has NOT confirmed yet. They will call the phone number to confirm the exact time and doctor. This is a simulated staff inbox in the demo.",
     }
 

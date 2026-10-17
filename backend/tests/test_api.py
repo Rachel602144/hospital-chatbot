@@ -279,3 +279,37 @@ def test_lazy_db_connect_does_not_deadlock(tmp_path, monkeypatch):
     monkeypatch.setattr(db, "_conn", None)
     monkeypatch.setattr(db, "DB_PATH", str(tmp_path / "lazy.db"))
     assert len(db.create_session()) == 36
+
+
+def test_tool_result_gives_correct_weekday(client, session, fake):
+    fake.script = [tool("update_appointment_request", department="Cardiology", date=FRIDAY), text("Noted.")]
+    send(client, session, "cardiology friday")
+    assert '"date_readable": "Friday' in fake.calls[-1][-1]["content"]
+
+
+def test_prompt_contains_calendar(client, session, fake):
+    send(client, session, "hi")
+    assert "CALENDAR (next 14 days)" in fake.calls[0][0]["content"]
+
+
+def test_model_failure_after_submit_reports_truth(client, session, fake):
+    fake.script = [tool("update_appointment_request", department="Cardiology", date=FRIDAY, time_slot="morning",
+                        patient_name="Ramesh Iyer", phone="9876543210"), text("Shall I send it?")]
+    send(client, session, "details")
+
+    class FailAfterSubmit:
+        calls = []
+        def __init__(self): self.n = 0
+        def chat(self, messages, tools_):
+            self.n += 1
+            if self.n == 1:
+                return tool("submit_appointment_request")
+            from app.llm import LLMUnavailable
+            raise LLMUnavailable("timeout after tool")
+
+    from app import main
+    main.llm = FailAfterSubmit()
+    out = send(client, session, "yes")
+    assert out["state"]["appointment_status"] == "pending_confirmation"
+    assert "has been sent to reception" in out["reply"] and "trouble" not in out["reply"]
+    assert "Friday" in out["reply"]

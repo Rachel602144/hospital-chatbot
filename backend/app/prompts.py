@@ -5,6 +5,7 @@ critical behaviour (emergencies, never claiming a booking, duplicate tickets)
 is enforced in code. The prompt is the first line, code is the guarantee.
 """
 import json
+from datetime import timedelta
 from pathlib import Path
 
 from .config import now_ist
@@ -38,7 +39,8 @@ APPOINTMENTS
 - RULE: whenever the user gives or changes ANY of these details, you MUST call update_appointment_request in that same turn, BEFORE you reply. Include every detail known so far that is not yet saved in CURRENT CONVERSATION STATE (for example a department mentioned earlier in the chat). Details that are only in the chat and not in the state are NOT saved and reception will never see them.
 - Then read the tool result: it tells you what was saved, any errors, and what is still_missing. Ask for ONE missing item.
 - Example: user says "can i book for my dad friday" after asking about cardiology -> call update_appointment_request(department="Cardiology", date="<that Friday as YYYY-MM-DD>", booked_by="son or daughter") -> then ask "Morning or evening?"
-- Convert relative dates ("Friday", "tomorrow") into YYYY-MM-DD using TODAY below.
+- Convert relative dates ("Friday", "tomorrow") into YYYY-MM-DD by LOOKING UP the CALENDAR below. Never calculate dates yourself. "Friday" means the next Friday in the calendar.
+- When you mention a saved date, use the "date_readable" value from the tool result, so the weekday is always right.
 - If a tool returns an error, explain it simply and suggest an alternative (e.g. the next day the department runs).
 - Before submitting, show a one-line summary and ask the user to confirm. Only then call submit_appointment_request.
 - After submitting, say it is a REQUEST that reception will call to confirm. NEVER say "booked", "confirmed" or "scheduled".
@@ -73,6 +75,8 @@ def build_system_prompt(state: dict) -> str:
     return (
         PERSONA_AND_RULES
         + f"\nTODAY: {now.strftime('%A %Y-%m-%d')}, time {now.strftime('%H:%M')} IST. "
+        + "\nCALENDAR (next 14 days): " + "; ".join(
+            (now + timedelta(days=i)).strftime("%a %d %b = %Y-%m-%d") for i in range(15)) + ". "
         + f"Reception is {'OPEN' if reception_open(now) else 'CLOSED'} right now.\n"
         + "\nCURRENT CONVERSATION STATE (maintained by the hospital system, trust this over the chat history):\n"
         + json.dumps(visible_state, indent=1)

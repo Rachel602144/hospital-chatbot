@@ -34,7 +34,7 @@ class LLMClient:
                 model=LLM_MODEL,
                 messages=messages,
                 temperature=0.3,  # low: consistent, less 'creative' wording
-                max_tokens=1200,   # reasoning models spend some tokens thinking before replying
+                max_tokens=2000,   # reasoning models spend some tokens thinking before replying
                 **extra,
             )
         except Exception as exc:  # timeout, 401 bad key, 429 rate limit, 5xx, network...

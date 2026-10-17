@@ -41,6 +41,20 @@ def _emergency_reply(state: dict) -> str:
     return reply
 
 
+def _state_reply(state: dict, tools_used: list) -> str | None:
+    """If the model failed after a tool already did something, describe what the
+    CODE knows happened, instead of a generic error that would mislead the patient."""
+    appt = state["appointment"]
+    if "submit_appointment_request" in tools_used and appt["status"] == "pending_confirmation":
+        return (f"Your request {appt['reference']} has been sent to reception: {appt['department']}, "
+                f"{tools.readable_date(appt['date'])}, {appt['time_slot']}. It isn't confirmed yet; "
+                f"reception will call {appt['phone']} to confirm the time and doctor.")
+    if "request_human_handoff" in tools_used and state["handoff_ticket"]:
+        return (f"I've passed this to our front desk (ticket HO-{state['handoff_ticket']:04d}). "
+                "This is not an emergency line. For an emergency, call 108.")
+    return None
+
+
 def _guard(reply: str, state: dict) -> str:
     """Code-level check on what the model wrote. The model must never tell a
     patient their appointment is booked: only reception can confirm."""
@@ -125,7 +139,7 @@ def handle_message(text: str, state: dict, history: list, session_id: str, llm) 
             raise LLMUnavailable("no final text after tool rounds")
     except LLMUnavailable as exc:
         log.error("LLM unavailable: %s", exc)
-        reply = prefix + safety.FALLBACK_TEMPLATE
+        reply = prefix + (_state_reply(state, tools_used) or safety.FALLBACK_TEMPLATE)
         history.append({"role": "assistant", "content": reply})
         return {"reply": reply, "level": level.value, "used_llm": False, "fallback": True}
 

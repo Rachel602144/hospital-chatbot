@@ -11,7 +11,7 @@ There are two kinds of tests, because there are two kinds of behaviour.
 
 Run: `cd backend` then `python -m pytest -v`
 
-Result recorded on 17 Oct 2026 (Linux, Python 3.13): **59 passed**.
+Result recorded on 17 Oct 2026 (Linux, Python 3.13): **62 passed**.
 **Re-run on your own machine and record your result here before submitting.**
 
 | Area | Tests |
