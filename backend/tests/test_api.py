@@ -313,3 +313,9 @@ def test_model_failure_after_submit_reports_truth(client, session, fake):
     assert out["state"]["appointment_status"] == "pending_confirmation"
     assert "has been sent to reception" in out["reply"] and "trouble" not in out["reply"]
     assert "Friday" in out["reply"]
+
+
+def test_markdown_bold_is_stripped(client, session, fake):
+    fake.script = [text("Request for **Ramesh Iyer** on **Friday**.")]
+    out = send(client, session, "hi")
+    assert "**" not in out["reply"] and "Ramesh Iyer" in out["reply"]

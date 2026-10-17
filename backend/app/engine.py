@@ -55,6 +55,14 @@ def _state_reply(state: dict, tools_used: list) -> str | None:
     return None
 
 
+def _plain(reply: str) -> str:
+    """The chat shows plain text, so strip markdown the model may still add."""
+    reply = re.sub(r"\*\*(.+?)\*\*", r"\1", reply)
+    reply = re.sub(r"__(.+?)__", r"\1", reply)
+    reply = re.sub(r"^#{1,6}\s*", "", reply, flags=re.MULTILINE)
+    return reply
+
+
 def _guard(reply: str, state: dict) -> str:
     """Code-level check on what the model wrote. The model must never tell a
     patient their appointment is booked: only reception can confirm."""
@@ -144,6 +152,6 @@ def handle_message(text: str, state: dict, history: list, session_id: str, llm) 
         return {"reply": reply, "level": level.value, "used_llm": False, "fallback": True}
 
     # ---- 4. output guard --------------------------------------------------------
-    reply = prefix + _guard(reply, state)
+    reply = prefix + _guard(_plain(reply), state)
     history.append({"role": "assistant", "content": reply})
     return {"reply": reply, "level": level.value, "used_llm": True, "fallback": False, "tools": tools_used}
