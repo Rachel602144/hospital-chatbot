@@ -180,7 +180,7 @@ def test_past_history_gets_safety_line_and_continues(client, session, fake):
 
 
 def test_model_side_urgent_flag(client, session, fake):
-    fake.script = [tool("flag_urgent_symptoms", description="crushing chest sensation")]
+    fake.script = [tool("flag_urgent_symptoms", level="emergency_now", description="crushing chest sensation")]
     out = send(client, session, "it feels like an elephant is sitting on his chest")
     assert out["reply"].startswith(EMERGENCY_TEMPLATE)
 
@@ -319,3 +319,19 @@ def test_markdown_bold_is_stripped(client, session, fake):
     fake.script = [text("Request for **Ramesh Iyer** on **Friday**.")]
     out = send(client, session, "hi")
     assert "**" not in out["reply"] and "Ramesh Iyer" in out["reply"]
+
+
+def test_model_possibly_serious_adds_line_and_keeps_helping(client, session, fake):
+    fake.script = [tool("flag_urgent_symptoms", level="possibly_serious", description="headache, dizziness"),
+                   text("I can't say what's causing it, but a General Medicine doctor can check. Shall I request an appointment?")]
+    out = send(client, session, "my head hurts and I feel dizzy, what do I have?")
+    from app.safety import SEVERE_LINE
+    assert out["reply"].startswith(SEVERE_LINE)
+    assert "General Medicine" in out["reply"]
+    assert out["state"]["mode"] == "normal"
+
+
+def test_model_flag_without_level_is_treated_as_emergency(client, session, fake):
+    fake.script = [tool("flag_urgent_symptoms", description="something")]
+    out = send(client, session, "odd symptom")
+    assert out["reply"].startswith(EMERGENCY_TEMPLATE)

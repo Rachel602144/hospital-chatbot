@@ -51,7 +51,7 @@ Messages are sent to a third-party model provider. A real deployment would need 
 - **A real staff-side tool:** the inbox is a simulation.
 
 ## Testing and limits
-- **63 automated tests pass.** They cover safety classification (including documented misses), validation, state and corrections, the booking-claim guard, handoff idempotency, outages, session isolation, rate limiting and log hygiene. They use a scripted fake model, so they test *my code*, not the model's judgement.
+- **65 automated tests pass.** They cover safety classification (including documented misses), validation, state and corrections, the booking-claim guard, handoff idempotency, outages, session isolation, rate limiting and log hygiene. They use a scripted fake model, so they test *my code*, not the model's judgement.
 - **The real model's behaviour is checked with a manual script** (`TEST_PLAN.md`), because wording varies between runs.
 - **Known limits:**
   - Keyword safety misses paraphrases and non-English text.

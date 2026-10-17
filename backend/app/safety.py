@@ -130,6 +130,12 @@ POSSIBLE_LINE = (
     "Emergency department (open 24 hours, 080-4000-1999). Don't wait for an appointment.\n\n"
 )
 
+# Used when the MODEL flags ordinary symptoms (headache, fever...) that only matter if severe.
+SEVERE_LINE = (
+    "If this is severe or came on suddenly, please call 108 or come to our "
+    "Emergency department (open 24 hours, 080-4000-1999).\n\n"
+)
+
 AFTER_EMERGENCY_LINE = (
     "Before we continue: if the symptoms you mentioned are still there or come back, "
     "please call 108 or go to Emergency rather than waiting for an OPD visit.\n\n"

@@ -39,7 +39,7 @@ Each entry covers: what we chose, what else we considered, why, the cost of the 
   - **EMERGENCY** stops everything and shows the fixed template.
   - **POSSIBLE** (symptom words + past/negation words) adds an "if this is happening now" line, then continues.
   - **NONE** proceeds normally.
-- **Second layer:** the model can call `flag_urgent_symptoms` to catch paraphrases.
+- **Second layer:** the model can call `flag_urgent_symptoms` to catch paraphrases. It must pick a level: `emergency_now` (same fixed template as the code check) or `possibly_serious` (adds "if severe or sudden, call 108" and keeps helping). Added after real testing: "headache and dizzy" made the model trigger a full emergency stop, which helped nobody. A missing level is treated as an emergency, the safer direction.
 - **Cost:**
   - Keywords miss paraphrases and non-English text (these are tested and documented as misses).
   - Keywords produce false positives. We accept those, because showing emergency advice unnecessarily is far less harmful than missing an emergency.

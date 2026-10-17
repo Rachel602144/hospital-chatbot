@@ -74,13 +74,20 @@ TOOL_SCHEMAS = [
         "function": {
             "name": "flag_urgent_symptoms",
             "description": (
-                "Call immediately if the user describes symptoms that may need emergency care right "
-                "now (e.g. severe pain, breathing trouble, signs of stroke, heavy bleeding), even if phrased unusually."
+                "Call when the user describes symptoms happening now. Choose the level carefully. "
+                "emergency_now: possible life-threatening emergency right now, e.g. chest pain or pressure, "
+                "can't breathe, stroke signs (face drooping, slurred speech, one-sided weakness), collapse, "
+                "unconsciousness, heavy bleeding, seizure, severe allergic reaction, even if phrased unusually. "
+                "possibly_serious: symptoms that are usually not an emergency but could be if severe or sudden, "
+                "e.g. headache, dizziness, fever, vomiting, stomach pain. Do not call for past symptoms."
             ),
             "parameters": {
                 "type": "object",
-                "properties": {"description": {"type": "string"}},
-                "required": ["description"],
+                "properties": {
+                    "level": {"type": "string", "enum": ["emergency_now", "possibly_serious"]},
+                    "description": {"type": "string"},
+                },
+                "required": ["level", "description"],
             },
         },
     },
@@ -208,8 +215,9 @@ def open_handoff(state: dict, session_id: str, reason: str, summary: str) -> dic
     }
 
 
-def execute(name: str, raw_args: str, state: dict, session_id: str) -> tuple[dict, bool]:
-    """Run one tool call. Returns (result_for_model, urgent_flag_raised)."""
+def execute(name: str, raw_args: str, state: dict, session_id: str) -> tuple[dict, bool | str]:
+    """Run one tool call. Returns (result_for_model, flag): flag is True for an
+    emergency, "possible" for a possibly-serious symptom, False otherwise."""
     try:
         args = json.loads(raw_args or "{}")
         if not isinstance(args, dict):
@@ -225,5 +233,10 @@ def execute(name: str, raw_args: str, state: dict, session_id: str) -> tuple[dic
     if name == "request_human_handoff":
         return open_handoff(state, session_id, str(args.get("reason", "")), str(args.get("summary", ""))), False
     if name == "flag_urgent_symptoms":
+        # Unknown or missing level -> treat as the emergency (safer direction).
+        if args.get("level") == "possibly_serious":
+            return {"ok": True, "note": "The system has already added: 'if this is severe or came on suddenly, call 108 or "
+                    "come to Emergency'. Do not repeat it. Now answer helpfully without diagnosing: suggest a "
+                    "consultation (e.g. General Medicine) and offer to request an appointment."}, "possible"
         return {"ok": True}, True
     return {"ok": False, "error": f"unknown tool {name}"}, False

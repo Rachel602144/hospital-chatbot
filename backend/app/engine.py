@@ -137,6 +137,11 @@ def handle_message(text: str, state: dict, history: list, session_id: str, llm) 
             for c in calls:
                 tools_used.append(c.function.name)
                 result, urgent = tools.execute(c.function.name, c.function.arguments, state, session_id)
+                if urgent == "possible":  # model: could be serious if severe -> safety line, keep helping
+                    if safety.POSSIBLE_LINE not in prefix and safety.SEVERE_LINE not in prefix:
+                        prefix = safety.SEVERE_LINE + prefix
+                    messages.append({"role": "tool", "tool_call_id": c.id, "content": json.dumps(result)})
+                    continue
                 if urgent:  # second, model-based safety layer
                     log.info("model flagged urgent symptoms")
                     reply = _emergency_reply(state)
