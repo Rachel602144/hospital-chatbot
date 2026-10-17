@@ -158,5 +158,9 @@ def handle_message(text: str, state: dict, history: list, session_id: str, llm) 
 
     # ---- 4. output guard --------------------------------------------------------
     reply = prefix + _guard(_plain(reply), state)
+    if "request_human_handoff" in tools_used and state["handoff_ticket"]:
+        # The model may forget the honesty details; code adds them every time.
+        reply += (f"\n\nTicket HO-{state['handoff_ticket']:04d}. Demo note: this goes to a simulated staff inbox. "
+                  "This is not an emergency line. For an emergency, call 108.")
     history.append({"role": "assistant", "content": reply})
     return {"reply": reply, "level": level.value, "used_llm": True, "fallback": False, "tools": tools_used}

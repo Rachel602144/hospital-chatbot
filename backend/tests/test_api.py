@@ -335,3 +335,10 @@ def test_model_flag_without_level_is_treated_as_emergency(client, session, fake)
     fake.script = [tool("flag_urgent_symptoms", description="something")]
     out = send(client, session, "odd symptom")
     assert out["reply"].startswith(EMERGENCY_TEMPLATE)
+
+
+def test_model_handoff_always_gets_ticket_and_honesty_line(client, session, fake):
+    fake.script = [tool("request_human_handoff", reason="frustrated", summary="Caller cannot reach reception"),
+                   text("I'm sorry you're having trouble reaching us. I've created a ticket.")]
+    out = send(client, session, "this is useless, nobody ever answers your phone")
+    assert "HO-0001" in out["reply"] and "simulated" in out["reply"] and "108" in out["reply"]

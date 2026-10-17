@@ -43,7 +43,7 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 notepad .env          # paste your key after LLM_API_KEY=, save
 python check_llm.py   # checks the AI connection
-python -m pytest -q   # should say: 65 passed
+python -m pytest -q   # should say: 66 passed
 uvicorn app.main:app --reload
 ```
 
@@ -105,7 +105,7 @@ backend/
     db.py          SQLite: sessions, appointment requests, handoff tickets
     config.py      settings from .env
     knowledge/hospital_info.md   approved hospital facts (fictional)
-  tests/           65 automated tests (fake AI, no key needed)
+  tests/           66 automated tests (fake AI, no key needed)
   check_llm.py     quick check that your key and model work
 frontend/src/
   App.jsx          patient chat
