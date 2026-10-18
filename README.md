@@ -31,6 +31,17 @@ Full assumptions are in [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md), along wi
 | **Hands over to a human** | A button that's always visible, or just saying so. It creates one ticket with a summary so staff don't re-ask, and is honest that the inbox is simulated, whether reception is open, and that it is **not** an emergency line. |
 | **Fails safely** | If the AI provider is down, patients get phone numbers instead of an error page, and emergency detection and handoff still work. |
 
+<table>
+<tr>
+<td width="72%"><img src="docs/screenshots/desktop-emergency.png" alt="Desktop: emergency mid-booking"></td>
+<td width="28%"><img src="docs/screenshots/mobile-welcome.png" alt="Mobile: welcome screen"></td>
+</tr>
+<tr>
+<td><sub>Desktop. An emergency mentioned mid-booking: fixed message and call buttons, while the half-finished request is kept.</sub></td>
+<td><sub>Mobile. The 24x7 emergency number stays visible.</sub></td>
+</tr>
+</table>
+
 ---
 
 ## The key design decision: the AI proposes, the code decides
