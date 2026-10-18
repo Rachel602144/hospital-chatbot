@@ -198,4 +198,4 @@ frontend/src/    App.jsx (patient chat) · Staff.jsx (staff inbox) · api.js
 
 ---
 
-*Built with Claude as a pair programmer. I chose the problem, the user, the scope and the safety design, tested every behaviour against the real model, and worked through the fixes listed above.*
+
